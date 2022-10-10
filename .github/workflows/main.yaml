@@ -1,0 +1,36 @@
+name: Check and Publish
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  publish:
+    name: Publish the lab
+    runs-on: ubuntu-latest
+
+    # Available context: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Remove hidden source code
+        run: /bin/bash publish/main.sh
+      - name: Pushes to another repository
+        id: push_directory
+        uses: cpina/github-action-push-to-another-repository@ssh-deploy-key
+        env:
+          SSH_DEPLOY_KEY: ${{ secrets.SSH_DEPLOY_KEY }}
+        with:
+          source-directory: public
+          destination-github-username: SOAR-PKU
+          destination-repository-name: lab-sftp
+          user-email: zhouyuhan_@outlook.com
+          commit-message: Origin commit ORIGIN_COMMIT
