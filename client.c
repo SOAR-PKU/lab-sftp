@@ -12,13 +12,10 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include "libsftp/buffer.h"
 #include "libsftp/libsftp.h"
-#include "libsftp/logger.h"
-#include "libsftp/session.h"
 
 #define MAX_BUF_SIZE 16384
 
@@ -180,8 +177,6 @@ int main(int argc, char** argv) {
         exit(1);
     }
 
-    LOG_NOTICE("SSH connection succeed");
-
     /* Authentication Layer */
     rc = SSH_ERROR;
     while (rc != SSH_OK) {
@@ -199,8 +194,6 @@ int main(int argc, char** argv) {
         }
     }
 
-    LOG_NOTICE("User authentication passed");
-
     /* Connection Layer & SFTP Layer */
     sftp_session sftp = sftp_new(session);
     if (sftp == NULL) {
@@ -213,8 +206,6 @@ int main(int argc, char** argv) {
         fprintf(stderr, "%s", ssh_get_error());
         exit(1);
     }
-
-    LOG_NOTICE("SFTP init succeed");
 
     /* File manipulation: interactive shell */
     while (1) {
