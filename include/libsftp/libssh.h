@@ -13,9 +13,7 @@
 #define LIBSSH_H
 
 #include <sys/types.h>
-#ifdef LINUX
-    #include <stdint.h>
-#endif
+#include <stdint.h>
 
 #define API
 

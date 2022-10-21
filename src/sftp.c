@@ -1,6 +1,6 @@
 /**
  * @file stfp.c
- * @author Zhou Yuhan (zhouyuhan_@outlook.com)
+ * @author Zhou Yuhan (zhouyuhan@pku.edu.cn)
  * @brief Implementaiton of SFTP functions, including APIs and helpers.
  * Only open, close, read, write of regular files are supported
  * @version 0.1
