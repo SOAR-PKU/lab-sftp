@@ -96,7 +96,24 @@ int ssh_socket_connect(ssh_socket s, const char *host, uint16_t port,
 void ssh_socket_set_fd(ssh_socket s, int fd) { s->fd = fd; }
 
 int ssh_socket_write(ssh_socket s, const void *buffer, size_t len) {
-    return write(s->fd, buffer, len);
+    size_t total=0;
+    
+    while (total < len) {
+        int writen = write(s->fd, buffer+total, len-total);
+        if (writen < 0) {
+            if (errno == EINTR)
+                continue;
+            LOG_ERROR("write error on fd %d", s->fd);
+            ssh_set_error(SSH_FATAL, "socket %d write error", s->fd);
+            return SSH_ERROR;
+        } else if (writen == 0) {
+            LOG_ERROR("write EOF on fd %d", s->fd);
+            ssh_set_error(SSH_FATAL, "socket %d write EOF", s->fd);
+            return SSH_ERROR;
+        }
+        total += writen;
+    }
+    return SSH_OK;
 }
 
 int ssh_socket_read(ssh_socket s, void *buffer, size_t len) {
@@ -106,8 +123,14 @@ int ssh_socket_read(ssh_socket s, void *buffer, size_t len) {
         char tmp[256];
         readn = read(s->fd, tmp, sizeof(tmp));
         if (readn < 0) {
+            if(errno == EINTR)
+                continue;
             LOG_ERROR("read error on fd %d", s->fd);
             ssh_set_error(SSH_FATAL, "socket %d read error", s->fd);
+            return SSH_ERROR;
+        } else if (readn == 0) {
+            LOG_ERROR("read EOF on fd %d", s->fd);
+            ssh_set_error(SSH_FATAL, "socket %d read EOF", s->fd);
             return SSH_ERROR;
         }
         ssh_buffer_add_data(s->in_buffer, tmp, readn);
