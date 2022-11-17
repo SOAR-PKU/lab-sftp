@@ -96,10 +96,10 @@ int ssh_socket_connect(ssh_socket s, const char *host, uint16_t port,
 void ssh_socket_set_fd(ssh_socket s, int fd) { s->fd = fd; }
 
 int ssh_socket_write(ssh_socket s, const void *buffer, size_t len) {
-    size_t total=0;
+    size_t total = 0;
     
     while (total < len) {
-        int writen = write(s->fd, buffer+total, len-total);
+        int writen = write(s->fd, buffer + total, len - total);
         if (writen < 0) {
             if (errno == EINTR)
                 continue;

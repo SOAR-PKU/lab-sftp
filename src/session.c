@@ -194,10 +194,17 @@ int receive_id_str(ssh_session session) {
      */
 
     /* according to RFC 4253 the max banner length is 255 */
+    int ssh_start = -1,ssh_end = -1;
     for (int i = 0; i < 256; ++i) {
         ssh_socket_read(session->socket, &buffer[i], 1);
         // LAB: insert your code here.
-
+        if (i >= 3 && !strncmp(buffer + i - 3, "SSH-", 4))
+            ssh_start = i - 3;
+        if (ssh_start >= 0 && i >= 1 && !strncmp(buffer + i - 1, "\r\n", 2)) {
+            ssh_end = i - 1;
+            session->server_id_str = strndup(buffer + ssh_start,ssh_end - ssh_start);
+            return SSH_OK;
+        }
     }
     /* this line should not be reached */
     return SSH_ERROR;
