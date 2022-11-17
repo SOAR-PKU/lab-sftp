@@ -189,7 +189,7 @@ int ssh_receive_kex(ssh_session session) {
         if (!str) goto error;
         rc = ssh_buffer_add_ssh_string(session->in_hashbuf,str);
         if (rc != SSH_OK) goto error;
-        strings[i] = strndup(str->data, str->size);
+        strings[i] = strndup(str->data, ntohl(str->size));
         ssh_string_free(str);
 
     }
