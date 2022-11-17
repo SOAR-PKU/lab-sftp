@@ -185,6 +185,12 @@ int ssh_receive_kex(ssh_session session) {
     for (int i = 0; i < SSH_KEX_METHODS; i++) {
         /* parse name-lists, don't forget to add `in_hashbuf` */
         // LAB: insert your code here.
+        str = ssh_buffer_get_ssh_string(session->in_buffer);
+        if (!str) goto error;
+        rc = ssh_buffer_add_ssh_string(session->in_hashbuf,str);
+        if (rc != SSH_OK) goto error;
+        strings[i] = strndup(str->data, str->size);
+        ssh_string_free(str);
 
     }
 
@@ -230,6 +236,10 @@ int ssh_select_kex(ssh_session session) {
     for (int i = 0; i < SSH_KEX_METHODS; ++i) {
         /* select negotiated algorithms and store them in `next_crypto->kex_methods` */
         // LAB: insert your code here.
+        char *scli = session->next_crypto->client_kex.methods[i];
+        char *sser = session->next_crypto->server_kex.methods[i];
+        if (!strstr(sser, scli)) goto error;
+        session->next_crypto->kex_methods[i] = strdup(scli);
 
     }
     session->next_crypto->kex_type = SSH_KEX_DH_GROUP14_SHA256;
