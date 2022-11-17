@@ -123,16 +123,44 @@ int ssh_userauth_password(ssh_session session, const char *password) {
         switch (type) {
             case SSH_MSG_USERAUTH_BANNER:
                 // LAB: insert your code here.
+                ssh_string msg = ssh_buffer_get_ssh_string(session->in_buffer);
+                ssh_string lang = ssh_buffer_get_ssh_string(session->in_buffer);
+                if (!msg || !lang)
+                    goto error;
+                uint32_t len = ntohl(msg->size);
+                for (int i = 0; i < len; i++) {
+                    char ch = msg->data[i];
+                    if (ch != '\e')
+                        putchar(ch);
+                    else
+                        printf("^[");
+                }
+                ssh_string_free(msg);
+                ssh_string_free(lang);
+                break;
+
 
             case SSH_MSG_USERAUTH_SUCCESS:
                 // LAB: insert your code here.
+                LOG_NOTICE("password authentication succeeded");
+                return SSH_OK;
 
             case SSH_MSG_USERAUTH_PASSWD_CHANGEREQ:
             case SSH_MSG_USERAUTH_FAILURE:
                 // LAB: insert your code here.
+                if (++cnt < 3) {
+                    ssh_buffer_reinit(session->out_buffer);
+                    ssh_buffer_reinit(session->in_buffer);
+                    LOG_NOTICE("password authentication failed, please try again");
+                    return SSH_AGAIN;
+                }
+                LOG_NOTICE("password authentication failed for 3 times");
+                goto error;
 
             default:
                 // LAB: insert your code here.
+                LOG_ERROR("unknown type: %d", type);
+                goto error;
 
         }
     }

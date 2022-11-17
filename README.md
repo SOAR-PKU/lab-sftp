@@ -18,8 +18,8 @@ To talk with real servers, we MUST make our implementation RFC-compliant.
 Since SFTP is a subsystem of Secure Shell protocol (SSH), we follow the RFC specification of the whole SSH system, including:
 - [RFC4251 SSH Protocol Architecture](https://datatracker.ietf.org/doc/html/rfc4251)
 - [RFC4253 SSH Transport Layer Protocol](https://datatracker.ietf.org/doc/html/rfc4253)
-- [RFC4252 SSH Authentication Protocol](https://datatracker.ietf.org/doc/html/rfc4251)
-- [RFC4254 SSH Connection Protocol](https://datatracker.ietf.org/doc/html/rfc4251)
+- [RFC4252 SSH Authentication Protocol](https://datatracker.ietf.org/doc/html/rfc4252)
+- [RFC4254 SSH Connection Protocol](https://datatracker.ietf.org/doc/html/rfc4254)
 - [IETF Draft SSH File Transfer Protocol](https://datatracker.ietf.org/doc/html/draft-ietf-secsh-filexfer-02)
 
 We highly recommend you read those materials and refer to the specification when your program behaves abnormally.

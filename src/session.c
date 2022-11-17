@@ -309,6 +309,7 @@ int ssh_connect(ssh_session session) {
         LOG_ERROR("can not request user authentication");
         goto error;
     }
+    LOG_NOTICE("SSH transport layer established");
 
     return SSH_OK;
 error:
