@@ -598,7 +598,7 @@ static int dh_receive_reply(ssh_session session) {
 
     /* Skip: check server public key */
     /* Waht should we do next? */
-    // LAB: insert your code here.
+    // LAB: insert your code here. (finished)
     dh_compute_shared_secret(crypto->dh_ctx, DH_CLIENT_KEYPAIR,
                              DH_SERVER_KEYPAIR, &crypto->shared_secret);
     
@@ -639,7 +639,7 @@ static int dh_set_new_keys(ssh_session session) {
     if (type != SSH_MSG_NEWKEYS) return SSH_ERROR;
 
     /* NEWKEYS received, now its time to activate encryption */
-    // LAB: insert your code here.
+    // LAB: insert your code here. (finished)
 
     session->current_crypto = session->next_crypto;
     session->current_crypto->used = SSH_DIRECTION_BOTH;

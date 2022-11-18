@@ -197,7 +197,7 @@ int receive_id_str(ssh_session session) {
     int ssh_start = -1,ssh_end = -1;
     for (int i = 0; i < 256; ++i) {
         ssh_socket_read(session->socket, &buffer[i], 1);
-        // LAB: insert your code here.
+        // LAB: insert your code here. (finished)
         if (i >= 3 && !strncmp(buffer + i - 3, "SSH-", 4))
             ssh_start = i - 3;
         if (ssh_start >= 0 && i >= 1 && !strncmp(buffer + i - 1, "\r\n", 2)) {

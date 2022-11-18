@@ -279,7 +279,7 @@ int ssh_packet_receive(ssh_session session) {
             goto error;
         }
         /* verify MAC, see `packet_hmac_verify` */
-        // LAB: insert your code here.
+        // LAB: insert your code here. (finished)
         rc = packet_hmac_verify(session, ssh_buffer_get(session->in_buffer),
                              packet_len + sizeof(uint32_t), mac, crypto->in_hmac);
 
