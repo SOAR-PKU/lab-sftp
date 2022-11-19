@@ -397,8 +397,8 @@ int32_t sftp_read(sftp_file file, void *buf, uint32_t count) {
                 SAFE_FREE(data);
                 return SSH_ERROR;
             }
-            memcpy(buf, data->data, min(data->size, count));
-            return min(data->size, count);
+            memcpy(buf, data->data, MIN(data->size, count));
+            return MIN(data->size, count);
 
         case SSH_FXP_STATUS:
             status = sftp_parse_status(response);
