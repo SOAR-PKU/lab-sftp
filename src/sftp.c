@@ -237,7 +237,7 @@ sftp_file sftp_open(sftp_session sftp, const char *filename, int flags,
 
     /* pack a new SFTP packet and send it using `sftp_packet_write` */
     // LAB: insert your code here. (finished)
-    if ((rc = ssh_buffer_pack(buffer, "dSddd", id, handle, perm_flags,
+    if ((rc = ssh_buffer_pack(buffer, "dsddd", id, filename, perm_flags,
         attr_flags, mode)) != SSH_OK) {
         LOG_CRITICAL("can not pack buffer");
         ssh_set_error(SSH_FATAL, "buffer error");

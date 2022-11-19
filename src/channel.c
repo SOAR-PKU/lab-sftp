@@ -103,7 +103,7 @@ static int channel_open(ssh_channel channel, const char *type, uint32_t window,
                 rc = ssh_buffer_unpack(session->in_buffer, "dddd",
                     &recipient_channel, &channel->remote_channel,
                     &channel->remote_window, &channel->remote_maxpacket);
-                if (!rc) return SSH_ERROR;
+                if (rc != SSH_OK) return SSH_ERROR;
                 if(recipient_channel != channel->local_channel)
                 {
                     LOG_ERROR(
@@ -186,8 +186,8 @@ static int channel_open(ssh_channel channel, const char *type, uint32_t window,
                         return SSH_ERROR;
                     }
                     if (ssh_packet_send(session) != SSH_OK) return SSH_ERROR;
-                    break;
                 }
+                break;
 
             default:
                 // LAB: insert your code here. (finished)
@@ -558,10 +558,21 @@ int ssh_channel_read(ssh_channel channel, void *dest, uint32_t count) {
         if (ssh_buffer_get_len(buf) > 0) {
             /* try to read channel data from static buffer first */
             // LAB: insert your code here. (finished)
-            uint32_t len = ssh_buffer_get_len(buf);
-            if (count < len) len = count;
-            ssh_buffer_get_data(buf, dest, len);
-            count -= len, dest += len;
+            uint32_t len;
+            ssh_buffer_unpack(buf, "d", &len);
+            if (len <= count)
+            {
+                ssh_buffer_get_data(buf, dest, len);
+                count -= len, dest += len, nread += len;
+            }
+            else
+            {
+                ssh_buffer_get_data(buf, dest, count);
+                dest += count, nread += count;
+                len -= count;
+                ssh_buffer_prepend_data(buf, &len, sizeof(uint32_t));
+                count = 0;
+            }
 
         } else {
             /* static buffer has insufficient data, read another
@@ -584,12 +595,14 @@ int ssh_channel_read(ssh_channel channel, void *dest, uint32_t count) {
                     // LAB: insert your code here. (finished)
                     rc = ssh_buffer_get_u32(session->in_buffer, &bytes_to_add);
                     channel->remote_window += bytes_to_add;
+                    break;
 
                 case SSH_MSG_CHANNEL_DATA:
                     // LAB: insert your code here. (finished)
                     channel_data = ssh_buffer_get_ssh_string(session->in_buffer);
                     ssh_buffer_add_ssh_string(buf, channel_data);
                     ssh_string_free(channel_data);
+                    break;
 
                 case SSH_MSG_CHANNEL_EOF:
                     // LAB: insert your code here. (finished)
@@ -612,8 +625,8 @@ int ssh_channel_read(ssh_channel channel, void *dest, uint32_t count) {
                             return SSH_ERROR;
                         }
                         if (ssh_packet_send(session) != SSH_OK) return SSH_ERROR;
-                        break;
                     }
+                    break;
 
                 default:
                     // LAB: insert your code here. (finished)
