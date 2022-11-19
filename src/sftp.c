@@ -236,8 +236,21 @@ sftp_file sftp_open(sftp_session sftp, const char *filename, int flags,
     id = sftp_get_new_id(sftp);
 
     /* pack a new SFTP packet and send it using `sftp_packet_write` */
-    // LAB: insert your code here.
+    // LAB: insert your code here. (finished)
+    if ((rc = ssh_buffer_pack(buffer, "dSddd", id, handle, perm_flags,
+        attr_flags, mode)) != SSH_OK) {
+        LOG_CRITICAL("can not pack buffer");
+        ssh_set_error(SSH_FATAL, "buffer error");
+        ssh_buffer_free(buffer);
+        return NULL;
+    }
 
+    if (sftp_packet_write(sftp, SSH_FXP_OPEN, buffer) < 0) {
+        LOG_CRITICAL("can not send open request");
+        ssh_set_error(SSH_FATAL, "open request error");
+        ssh_buffer_free(buffer);
+        return NULL;
+    }
 
     response = sftp_packet_read(sftp);
     if (response == NULL) {
@@ -248,13 +261,24 @@ sftp_file sftp_open(sftp_session sftp, const char *filename, int flags,
 
     switch (response->type) {
         case SSH_FXP_STATUS:
-            // LAB: insert your code here.
+            // LAB: insert your code here. (finished)
+            status = sftp_parse_status(response);
+            ssh_set_error(SSH_FATAL, "open request rejected by server");
+            ssh_buffer_free(buffer);
+            sftp_status_free(status);
+            return NULL;
 
         case SSH_FXP_HANDLE:
-            // LAB: insert your code here.
+            // LAB: insert your code here. (finished)
+            handle = sftp_parse_handle(response, id);
+            ssh_buffer_free(buffer);
+            return handle;
 
         default:
-            // LAB: insert your code here.
+            // LAB: insert your code here. (finished)
+            ssh_set_error(SSH_FATAL, "unexpected response type received");
+            ssh_buffer_free(buffer);
+            return NULL;
 
     }
     return NULL;
@@ -301,7 +325,15 @@ int sftp_close(sftp_file file) {
     }
 
     switch (response->type) {
-        // LAB: insert your code here.
+        // LAB: insert your code here. (finished)
+        case SSH_FXP_STATUS:
+            status = sftp_parse_status(response);
+            sftp_status_free(status);
+            return SSH_NO_ERROR;
+
+        default:
+            ssh_set_error(SSH_FATAL, "unexpected response type received");
+            return SSH_ERROR;
 
     }
 }
@@ -352,7 +384,31 @@ int32_t sftp_read(sftp_file file, void *buf, uint32_t count) {
     }
 
     switch (response->type) {
-        // LAB: insert your code here.
+        // LAB: insert your code here. (finished)
+        case SSH_FXP_DATA:
+            data = calloc(1, sizeof(struct ssh_string_struct));
+            if (data == NULL) return SSH_ERROR;
+            rc = ssh_buffer_unpack(response->payload, "dS", &recv_id, &data);
+            if (rc != SSH_OK || data == NULL) return SSH_ERROR;
+            if (id != recv_id) {
+                LOG_ERROR("sftp response id %d does not match with origin id %d", recv_id,
+                        id);
+                ssh_set_error(SSH_FATAL, "id does not match");
+                SAFE_FREE(data);
+                return SSH_ERROR;
+            }
+            memcpy(buf, data->data, min(data->size, count));
+            return min(data->size, count);
+
+        case SSH_FXP_STATUS:
+            status = sftp_parse_status(response);
+            ssh_set_error(SSH_FATAL, "read request rejected by server");
+            sftp_status_free(status);
+            return SSH_ERROR;
+
+        default:
+            ssh_set_error(SSH_FATAL, "unexpected response type received");
+            return SSH_ERROR;
 
     }
     return SSH_ERROR;
@@ -402,7 +458,15 @@ int32_t sftp_write(sftp_file file, const void *buf, uint32_t count) {
         }
 
         switch (response->type) {
-            // LAB: insert your code here.
+            // LAB: insert your code here. (finished)
+            case SSH_FXP_STATUS:
+                status = sftp_parse_status(response);
+                sftp_status_free(status);
+                break;
+            
+            default:
+                ssh_set_error(SSH_FATAL, "unexpected response type received");
+                return SSH_ERROR;
 
         }
     }

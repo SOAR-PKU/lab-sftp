@@ -99,10 +99,63 @@ static int channel_open(ssh_channel channel, const char *type, uint32_t window,
         rc = ssh_buffer_get_u8(session->in_buffer, &reply_type);
         switch (reply_type) {
             case SSH_MSG_CHANNEL_OPEN_CONFIRMATION:
-                // LAB: insert your code here.
+                // LAB: insert your code here. (finished)
+                rc = ssh_buffer_unpack(session->in_buffer, "dddd",
+                    &recipient_channel, &channel->remote_channel,
+                    &channel->remote_window, &channel->remote_maxpacket);
+                if (!rc) return SSH_ERROR;
+                if(recipient_channel != channel->local_channel)
+                {
+                    LOG_ERROR(
+                        "channel number in the reply %d does not match with "
+                        "the original %d",
+                        recipient_channel, channel->local_channel);
+                    return SSH_ERROR;
+                }
+                return SSH_OK;
 
             case SSH_MSG_CHANNEL_OPEN_FAILURE:
-                // LAB: insert your code here.
+                // LAB: insert your code here. (finished)
+                rc = ssh_buffer_get_u32(session->in_buffer, &recipient_channel);
+                if(recipient_channel != channel->local_channel)
+                {
+                    LOG_ERROR(
+                        "channel number in the reply %d does not match with "
+                        "the original %d",
+                        recipient_channel, channel->local_channel);
+                    return SSH_ERROR;
+                }
+                rc = ssh_buffer_get_u32(session->in_buffer, &reason_code);
+                description = ssh_buffer_get_ssh_string(session->in_buffer);
+                switch(reason_code)
+                {
+                    case SSH_OPEN_ADMINISTRATIVELY_PROHIBITED:
+                        LOG_ERROR(
+                            "administratively prohibited while opening "
+                            "local channel %d", channel->local_channel);
+                        break;
+                    case SSH_OPEN_CONNECT_FAILED:
+                        LOG_ERROR(
+                            "connect failed while opening "
+                            "local channel %d", channel->local_channel);
+                        break;
+                    case SSH_OPEN_UNKNOWN_CHANNEL_TYPE:
+                        LOG_ERROR(
+                            "unknown channel type while opening "
+                            "local channel %d", channel->local_channel);
+                        break;
+                    case SSH_OPEN_RESOURCE_SHORTAGE:
+                        LOG_ERROR(
+                            "resource shortage while opening "
+                            "local channel %d", channel->local_channel);
+                        break;
+                    default:
+                        LOG_ERROR(
+                            "unknown error while opening local channel %d",
+                            channel->local_channel);
+                }
+                LOG_ERROR(description);
+                return SSH_ERROR;
 
             case SSH_MSG_GLOBAL_REQUEST:
                 /**
@@ -122,10 +175,26 @@ static int channel_open(ssh_channel channel, const char *type, uint32_t window,
                  * naming convention outlined in [SSH-ARCH].
                  *
                  */
-                // LAB: insert your code here.
+                // LAB: insert your code here. (finished)
+                rc = ssh_buffer_unpack(session->in_buffer, "Sb", &req, &want);
+                if (want)
+                {
+                    rc = ssh_buffer_add_u8(session->out_buffer,
+                        SSH_MSG_REQUEST_FAILURE);
+                    if (rc != SSH_OK) {
+                        LOG_ERROR("can not create buffer");
+                        return SSH_ERROR;
+                    }
+                    if (ssh_packet_send(session) != SSH_OK) return SSH_ERROR;
+                    break;
+                }
 
             default:
-                // LAB: insert your code here.
+                // LAB: insert your code here. (finished)
+                LOG_ERROR(
+                    "unknown reply type while opening local channel %d",
+                    channel->local_channel);
+                return SSH_ERROR;
 
         }
     }
@@ -488,7 +557,11 @@ int ssh_channel_read(ssh_channel channel, void *dest, uint32_t count) {
     while (count > 0) {
         if (ssh_buffer_get_len(buf) > 0) {
             /* try to read channel data from static buffer first */
-            // LAB: insert your code here.
+            // LAB: insert your code here. (finished)
+            uint32_t len = ssh_buffer_get_len(buf);
+            if (count < len) len = count;
+            ssh_buffer_get_data(buf, dest, len);
+            count -= len, dest += len;
 
         } else {
             /* static buffer has insufficient data, read another
@@ -508,22 +581,44 @@ int ssh_channel_read(ssh_channel channel, void *dest, uint32_t count) {
             switch (type) {
                 case SSH_MSG_CHANNEL_WINDOW_ADJUST:
                     /* window adjust message could happen here */
-                    // LAB: insert your code here.
+                    // LAB: insert your code here. (finished)
+                    rc = ssh_buffer_get_u32(session->in_buffer, &bytes_to_add);
+                    channel->remote_window += bytes_to_add;
 
                 case SSH_MSG_CHANNEL_DATA:
-                    // LAB: insert your code here.
+                    // LAB: insert your code here. (finished)
+                    channel_data = ssh_buffer_get_ssh_string(session->in_buffer);
+                    ssh_buffer_add_ssh_string(buf, channel_data);
+                    ssh_string_free(channel_data);
 
                 case SSH_MSG_CHANNEL_EOF:
-                    // LAB: insert your code here.
+                    // LAB: insert your code here. (finished)
+                    channel->remote_eof = 1;
+                    goto cleanup;
 
                 case SSH_MSG_CHANNEL_CLOSE:
-                    // LAB: insert your code here.
+                    // LAB: insert your code here. (finished)
+                    goto cleanup;
 
                 case SSH_MSG_CHANNEL_REQUEST:
-                    // LAB: insert your code here.
+                    // LAB: insert your code here. (finished)
+                    rc = ssh_buffer_unpack(session->in_buffer, "Sb", &req, &want);
+                    if (want)
+                    {
+                        rc = ssh_buffer_add_u8(session->out_buffer,
+                            SSH_MSG_REQUEST_FAILURE);
+                        if (rc != SSH_OK) {
+                            LOG_ERROR("can not create buffer");
+                            return SSH_ERROR;
+                        }
+                        if (ssh_packet_send(session) != SSH_OK) return SSH_ERROR;
+                        break;
+                    }
 
                 default:
-                    // LAB: insert your code here.
+                    // LAB: insert your code here. (finished)
+                    LOG_ERROR("unexpected message type %d on channel reading", type);
+                    goto error;
 
             }
         }
