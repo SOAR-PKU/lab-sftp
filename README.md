@@ -491,7 +491,7 @@ In addition to the provided code, you should add:
 - a file named not-implemented.pdf listing tasks/features that are required but not implemented. You also need to explicitly give the reasons why you are not implementing them. Submit an empty file if you finished all the tasks. You may lose credits by adding items to this list, but being dishonest on this will make you lose more;
 - a directory named `checkpoint/` containing your texts, images, videos, or typescript files for each checkpoint.
 
-For submission, please send an email to zhouyuhan@pku.edu.cn. Missing the deadlines incurs a penalty.
+For submission, please send an email to altrialist@stu.pku.edu.cn. Missing the deadlines incurs a penalty.
 
 ## Acknowledgement
 
