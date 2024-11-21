@@ -280,6 +280,8 @@ int ssh_packet_receive(ssh_session session) {
         }
         /* verify MAC, see `packet_hmac_verify` */
         // LAB: insert your code here.
+        // ssh_log_hexdump("Decrypted data", ssh_buffer_get(session->in_buffer), packet_len + sizeof(uint32_t));
+        rc = packet_hmac_verify(session, ssh_buffer_get(session->in_buffer), packet_len + sizeof(uint32_t), mac, crypto->in_hmac);
 
         if (rc != SSH_OK) {
             ssh_set_error(SSH_FATAL, "hmac error");
@@ -385,6 +387,8 @@ int ssh_packet_send(ssh_session session) {
     if (rc < 0) return SSH_ERROR;
     rc = ssh_buffer_add_data(session->out_buffer, padding_data, padding_size);
     if (rc < 0) return SSH_ERROR;
+
+    // ssh_log_hexdump("Packet before encryption", ssh_buffer_get(session->out_buffer), ssh_buffer_get_len(session->out_buffer));
 
     hmac = packet_encrypt(session, ssh_buffer_get(session->out_buffer),
                           ssh_buffer_get_len(session->out_buffer));

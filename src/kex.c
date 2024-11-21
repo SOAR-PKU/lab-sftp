@@ -4,9 +4,9 @@
  * @brief SSH transport layer key exchange functionalities.
  * @version 0.1
  * @date 2022-10-05
- * 
+ *
  * @copyright Copyright (c) 2022
- * 
+ *
  */
 
 #include "libsftp/kex.h"
@@ -33,6 +33,21 @@ const char *supported_methods[] = {
     "none", /* compression algorithm client to server */
     "",     /* languages client to server */
     ""};    /* languages server to client */
+
+/**
+ * Name of each item in the cipher suite.
+ */
+const char *name_of_kex_methods[] = {
+    "Key Algorithms",
+    "Server Host Key Algorithms",
+    "Encryption Algorithms Client to Server",
+    "Encryption Algorithms Server to Client",
+    "MAC Algorithms Client to Server",
+    "MAC Algorithms Server to Client",
+    "Compression Algorithms Client to Server",
+    "Compression Algorithms Server to Client",
+    "Languages Client to Server",
+    "Languages Server to Client"};
 
 static int hashbufout_add_cookie(ssh_session session) {
     int rc;
@@ -109,9 +124,9 @@ int ssh_set_client_kex(ssh_session session) {
 
 /**
  * @brief Send supported cipher suites for algorithm negotiation.
- * 
- * @param session 
- * @return int 
+ *
+ * @param session
+ * @return int
  */
 int ssh_send_kex(ssh_session session) {
     struct ssh_kex_struct *kex = &session->next_crypto->client_kex;
@@ -152,9 +167,9 @@ error:
 
 /**
  * @brief Wait for algorithm negotiation reply.
- * 
- * @param session 
- * @return int 
+ *
+ * @param session
+ * @return int
  */
 int ssh_receive_kex(ssh_session session) {
     uint8_t msg_type = 0;
@@ -164,6 +179,7 @@ int ssh_receive_kex(ssh_session session) {
     bool first_kex_follows;
     uint32_t reserved;
     size_t len;
+    struct ssh_kex_struct *kex = &session->next_crypto->server_kex;
 
     rc = ssh_packet_receive(session);
     if (rc != SSH_OK) goto error;
@@ -185,7 +201,20 @@ int ssh_receive_kex(ssh_session session) {
     for (int i = 0; i < SSH_KEX_METHODS; i++) {
         /* parse name-lists, don't forget to add `in_hashbuf` */
         // LAB: insert your code here.
+        str = ssh_buffer_get_ssh_string(session->in_buffer);
+        strings[i] = ssh_string_to_char(str);
 
+        if (strings[i] == NULL) {
+            goto error;
+        }
+
+        kex->methods[i] = strings[i];
+
+        if (ssh_buffer_add_ssh_string(session->in_hashbuf, str) < 0) {
+            goto error;
+        }
+
+        ssh_string_free(str);
     }
 
     rc = ssh_buffer_unpack(session->in_buffer, "bd", &first_kex_follows,
@@ -218,20 +247,104 @@ error:
 }
 
 /**
+ * @brief Negotiate the algorithms supported by both ends.
+ *
+ * @param pdest Reference of dest string.
+ * @param server Algorithms supported by server host.
+ * @param client Algorithms supported by client host.
+ * @return 0 on success, -1 on error.
+ *
+ * @note As mentioned in the document that our client only needs to support
+ *   one specific cipher suite, there should be no comma in `client`.
+ *   If comma is found in `client`, this function will return an error.
+ *   Otherwise, the client string will be searched in the server string. If the
+ *   string is not found, this function will return an error as well.
+ */
+static int select_common_algorithm(char **pdest, char *server, char *client) {
+    if (server == NULL) {
+        LOG_ERROR("Server string not found.");
+        return -1;
+    }
+    if (client == NULL) {
+        LOG_ERROR("Client string not found.");
+        return -1;
+    }
+
+    size_t server_len = strlen(server);
+    size_t client_len = strlen(client);
+    int found;
+    int server_algo, next_comma, algo_len;
+    char *dest;
+
+    for (int i = 0; i < client_len; ++i) {
+        if (client[i] == ',') {
+            LOG_ERROR("Comma found in client string.");
+            return -1;
+        }
+    }
+
+    if (client_len == 0) {
+        dest = calloc(1, sizeof (char));
+    } else {
+        found = 0;
+
+        server_algo = 0;
+        while (server_algo < server_len) {
+            next_comma = server_algo;
+            while (next_comma < server_len && server[next_comma] != ',')
+                next_comma++;
+
+            algo_len = next_comma - server_algo;
+            if (algo_len == client_len && strncmp(server + server_algo, client, algo_len) == 0) {
+                found = 1;
+                break;
+            }
+
+            server_algo = next_comma + (next_comma < server_len);
+        }
+
+        if (found == 1) {
+            dest = calloc(client_len + 1, sizeof (char));
+            strncpy(dest, client, client_len);
+        } else {
+            LOG_ERROR("Client string not match the server string.");
+            return -1;
+        }
+    }
+
+    *pdest = dest;
+    return 0;
+}
+
+/**
  * @brief Select an agreed cipher suite based on both ends' negotiation messages.
- * 
- * @param session 
- * @return int 
+ *
+ * @param session
+ * @return int
  */
 int ssh_select_kex(ssh_session session) {
     struct ssh_kex_struct *server = &session->next_crypto->server_kex;
     struct ssh_kex_struct *client = &session->next_crypto->client_kex;
+    char *result = &session->next_crypto->kex_methods;
+    int rc;
 
     for (int i = 0; i < SSH_KEX_METHODS; ++i) {
         /* select negotiated algorithms and store them in `next_crypto->kex_methods` */
         // LAB: insert your code here.
+        LOG_INFO("Choosing for %s", name_of_kex_methods[i]);
 
+        rc = select_common_algorithm(&session->next_crypto->kex_methods[i],
+            server->methods[i], client->methods[i]);
+
+        if (rc < 0) {
+            goto error;
+        }
+
+        LOG_INFO(" - Server End: %s", server->methods[i]);
+        LOG_INFO(" - Client End: %s", client->methods[i]);
+        LOG_INFO(" - Negotiated Algorithm: %s", session->next_crypto->kex_methods[i]);
     }
+
     session->next_crypto->kex_type = SSH_KEX_DH_GROUP14_SHA256;
     return SSH_OK;
 

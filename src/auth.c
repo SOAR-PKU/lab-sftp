@@ -97,6 +97,11 @@ void ssh_get_password(char *password) {
 int ssh_userauth_password(ssh_session session, const char *password) {
     int rc;
     uint8_t type;
+    ssh_string auth_string;
+    uint8_t partial_success;
+    ssh_string banner_message;
+    ssh_string banner_language;
+    char *tmp;
     static int cnt = 0;
 
     rc = ssh_buffer_pack(session->out_buffer, "bsssbs",
@@ -123,16 +128,36 @@ int ssh_userauth_password(ssh_session session, const char *password) {
         switch (type) {
             case SSH_MSG_USERAUTH_BANNER:
                 // LAB: insert your code here.
+                ssh_buffer_unpack(session->in_buffer, "SS", &banner_message, &banner_message);
+
+                session->banner = banner_message;
+                tmp = ssh_string_to_char(banner_message);
+                LOG_INFO("Banner: %s", tmp);
+
+                SAFE_FREE(tmp);
+                ssh_string_free(banner_language);
+
+                break;
 
             case SSH_MSG_USERAUTH_SUCCESS:
                 // LAB: insert your code here.
+                LOG_INFO("authentication succeed");
+                ssh_buffer_reinit(session->out_buffer);
+                return SSH_OK;
 
             case SSH_MSG_USERAUTH_PASSWD_CHANGEREQ:
             case SSH_MSG_USERAUTH_FAILURE:
                 // LAB: insert your code here.
+                ssh_buffer_unpack(session->in_buffer, "Sb", &auth_string, &partial_success);
+                ssh_set_error(SSH_REQUEST_DENIED, "incorrect password\n");
+                ssh_string_free(auth_string);
+                ssh_buffer_reinit(session->out_buffer);
+                return SSH_AGAIN;
 
             default:
                 // LAB: insert your code here.
+                ssh_set_error(SSH_FATAL, "unknown packet\n");
+                goto error;
 
         }
     }

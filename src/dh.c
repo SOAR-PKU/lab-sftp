@@ -599,7 +599,9 @@ static int dh_receive_reply(ssh_session session) {
     /* Skip: check server public key */
     /* Waht should we do next? */
     // LAB: insert your code here.
-
+    dh_compute_shared_secret(crypto->dh_ctx, DH_CLIENT_KEYPAIR,
+        DH_SERVER_KEYPAIR, &crypto->shared_secret);
+    dh_compute_session_id(session);
 
     /* Skip: verifies signature on H (session id) */
 
@@ -636,6 +638,8 @@ static int dh_set_new_keys(ssh_session session) {
 
     /* NEWKEYS received, now its time to activate encryption */
     // LAB: insert your code here.
+    session->current_crypto = crypto;
+    crypto->used = SSH_DIRECTION_BOTH;
 
 
     /* next_crypto should be deprecated from now if re-kex is not supportes */
@@ -645,10 +649,10 @@ static int dh_set_new_keys(ssh_session session) {
 }
 
 /**
- * @brief Perform Diffie-Hellman key exchange procedure. 
- * 
- * @param session 
- * @return int 
+ * @brief Perform Diffie-Hellman key exchange procedure.
+ *
+ * @param session
+ * @return int
  */
 int ssh_dh_handshake(ssh_session session) {
     struct ssh_crypto_struct *crypto = session->next_crypto;

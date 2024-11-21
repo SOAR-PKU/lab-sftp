@@ -175,6 +175,22 @@ int send_id_str(ssh_session session) {
 }
 
 /**
+ * @brief Check if the line received is the version string.
+ *
+ * @param buffer
+ * @param len
+ * @return 1 for true, 0 for false.
+ */
+static int is_version_str_line(char *buffer, int len) {
+    if (len < 4) return 0;
+    if (buffer[0] != 'S' ||
+        buffer[1] != 'S' ||
+        buffer[2] != 'H' ||
+        buffer[3] != '-') return 0;
+    return 1;
+}
+
+/**
  * @brief Wait for server identification string and store it.
  *
  * @param session
@@ -185,7 +201,7 @@ int receive_id_str(ssh_session session) {
     char *ptr = buffer;
 
     /**
-     * The server MAY send other lines of data before sending the version 
+     * The server MAY send other lines of data before sending the version
      * string.  Each line SHOULD be terminated by a Carriage Return and Line
      * Feed.  Such lines MUST NOT begin with "SSH-", and SHOULD be encoded
      * in ISO-10646 UTF-8 [RFC3629] (language is not specified).  Clients
@@ -196,9 +212,24 @@ int receive_id_str(ssh_session session) {
     /* according to RFC 4253 the max banner length is 255 */
     for (int i = 0; i < 256; ++i) {
         ssh_socket_read(session->socket, &buffer[i], 1);
-        // LAB: insert your code here.
 
+        // receive new line
+        if (i > 0 && buffer[i - 1] == 0x0D && buffer[i] == 0x0A) {
+            int ok = is_version_str_line(buffer, i + 1);
+
+            if (ok == 0) { // if not the version string
+                // silently ignored
+                // clear buffer
+                while (i >= 0) buffer[i--] = 0;
+            } else {
+                buffer[i - 1] = 0;
+                session->server_id_str = calloc(i, sizeof (char));
+                strncpy(session->server_id_str, buffer, i - 1);
+                return SSH_OK;
+            }
+        }
     }
+
     /* this line should not be reached */
     return SSH_ERROR;
 }
@@ -252,6 +283,8 @@ int ssh_connect(ssh_session session) {
         LOG_ERROR("failed to receive server id str");
         goto error;
     }
+
+    LOG_INFO("Server ID string: %s", session->server_id_str);
 
     /**
      * 2.2 algorithm negotiation
